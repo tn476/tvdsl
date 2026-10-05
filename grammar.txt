@@ -1,0 +1,49 @@
+module      = item { item }
+item        = IDENT params ( "=>" predicate [ ";" ] | funcRest )
+
+params      = "(" [ varDef { "," varDef } ] ")"
+funcRest    = [ "requires" predicate ]
+              "returns" varDef { "," varDef }
+              [ "ensures" predicate ]
+              [ "uses" localDef { "," localDef } ]
+              statement
+
+varDef      = IDENT ":" type
+localDef    = IDENT [ ":" type ]
+type        = "int" [ "[" "]" ]
+
+statement   = assignment | ifStmt | whileStmt | block | assertStmt | assumeStmt
+block       = "{" { statement } "}"
+ifStmt      = "if" "(" condition ")" block [ "else" block ]
+whileStmt   = "while" "(" condition ")" [ "invariant" predicate ] block
+assertStmt  = "assert" predicate ";"
+assumeStmt  = "assume" predicate ";"
+assignment  = IDENT "=" expr ";"
+            | IDENT "[" expr "]" "=" expr ";"
+            | IDENT "," IDENT { "," IDENT } "=" call ";"
+
+condition   = orC [ "->" condition ]
+orC         = andC { "or" andC }
+andC        = notC { "and" notC }
+notC        = "not" notC | condAtom
+condAtom    = "true" | "false" | comparison | "(" condition ")"
+
+predicate   = orP [ "->" predicate ]
+orP         = andP { "or" andP }
+andP        = notP { "and" notP }
+notP        = "not" notP | predAtom
+predAtom    = quantifier | formulaRef | "true" | "false" | comparison | "(" predicate ")"
+quantifier  = ( "forall" | "exists" ) "(" varDef "|" predicate ")"
+formulaRef  = IDENT "(" [ expr { "," expr } ] ")"
+comparison  = expr relop expr
+relop       = "==" | "!=" | "<" | "<=" | ">" | ">="
+
+expr        = term { ( "+" | "-" ) term }
+term        = unary { ( "*" | "/" ) unary }
+unary       = "-" unary | primary
+primary     = INT
+            | call
+            | IDENT "[" expr "]"
+            | IDENT
+            | "(" expr ")"
+call        = ( IDENT | "length" ) "(" [ expr { "," expr } ] ")"
