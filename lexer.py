@@ -13,6 +13,7 @@ class Token:
 
 
 class Diagnostic(Exception):
+
     def __init__(self, msg: str, line: int, col: int):
         super().__init__(msg)
         self.msg, self.line, self.col = msg, line, col
@@ -77,7 +78,3 @@ def lex(text: str) -> Tuple[List[Token], List[Diagnostic]]:
 
     tokens.append(Token("EOF", "", line, col))
     return tokens, errors
-
-
-def dump_tokens(tokens: List[Token]) -> str:
-    return "\n".join(f"{t.line}:{t.col}\t{t.kind}\t{t.text!r}" for t in tokens)

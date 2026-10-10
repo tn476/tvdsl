@@ -11,7 +11,7 @@ def _copy(node, **changes):
 
 def desugar_stmt(s):
     if isinstance(s, Assign) and isinstance(s.target, Index):
-        arr, idx = s.target.array, s.target.index          # arr — Var
+        arr, idx = s.target.array, s.target.index
         call = Call("set", [Var(arr.name), idx, s.value])
         new = Assign(Var(arr.name), call)
         for node in (call, new, new.target, call.args[0]):

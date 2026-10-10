@@ -1,12 +1,4 @@
-"""
-Использование:
-    python3 funny_parser.py Prog.funny [--tokens | --ast | --json] [--desugar]
-Грамматика: grammar.txt
-"""
-
 import json
-import os
-import re
 import sys
 from dataclasses import dataclass
 from typing import List, Optional
@@ -14,7 +6,7 @@ from typing import List, Optional
 from ast_nodes import (Program, VarDef, Function, Formula, Block, If, While, Assert, Assume,
                        Assign, MultiAssign, Num, Var, Index, Call, Neg, BinOp, Bool, Compare,
                        Not, LogicOp, Quant, FormulaRef, to_dict, dump)
-from lexer import lex, dump_tokens, Diagnostic, Token
+from lexer import lex, Diagnostic, Token
 
 RELOPS = {"EQEQ": "==", "NEQ": "!=", "LE": "<=", "GE": ">=", "LT": "<", "GT": ">"}
 ARITH = {"PLUS", "MINUS", "STAR", "SLASH"}
@@ -134,7 +126,7 @@ class Parser:
         return self.at(VarDef(name.text, typ), name)
 
     def parse_type(self) -> str:
-        self.expect("KW_INT", "тип 'int' или 'int[]'")
+        self.expect("KW_INT", "'int' или 'int[]'")
         if self.accept("LBRACKET"):
             self.expect("RBRACKET", "']'")
             return "int[]"
@@ -150,8 +142,8 @@ class Parser:
             self.expect("LPAREN", "'('")
             cond = self.parse_logic(pred=False)
             self.expect("RPAREN", "')'")
-            then = self.parse_block_required()
-            els = self.parse_block_required() if self.accept("KW_ELSE") else None
+            then = self.parse_statement()
+            els = self.parse_statement() if self.accept("KW_ELSE") else None
             return self.at(If(cond, then, els), tok)
         if k == "KW_WHILE":
             self.advance()
@@ -159,7 +151,7 @@ class Parser:
             cond = self.parse_logic(pred=False)
             self.expect("RPAREN", "')'")
             inv = self.parse_logic() if self.accept("KW_INVARIANT") else None
-            return self.at(While(cond, inv, self.parse_block_required()), tok)
+            return self.at(While(cond, inv, self.parse_statement()), tok)
         if k in ("KW_ASSERT", "KW_ASSUME"):
             self.advance()
             pred = self.parse_logic()
@@ -168,11 +160,6 @@ class Parser:
         if k == "IDENT":
             return self.parse_assignment()
         raise self.error("ожидался оператор")
-
-    def parse_block_required(self) -> Block:
-        if self.peek().kind != "LBRACE":
-            raise self.error("ожидался блок '{ ... }'")
-        return self.parse_block()
 
     def parse_block(self) -> Block:
         open_tok = self.advance()
@@ -376,26 +363,7 @@ def main(argv):
     flags = {a for a in argv[1:] if a.startswith("--")}
     files = [a for a in argv[1:] if not a.startswith("--")]
     name = files[0] if files else "<stdin>"
-    if files:
-        module = os.path.splitext(os.path.basename(files[0]))[0]
-        if not re.fullmatch(r"[A-Za-z][A-Za-z0-9]*", module):
-            print(f"{name}: имя модуля {module!r} не является идентификатором Funny", file=sys.stderr)
-            return 2
-        try:
-            text = open(files[0], encoding="utf-8").read()
-        except OSError as e:
-            print(f"{name}: {e}", file=sys.stderr)
-            return 2
-    else:
-        text = sys.stdin.read()
-
-    if "--tokens" in flags:
-        tokens, _ = lex(text)
-        print(dump_tokens(tokens))
-        errors = parse(text).errors
-        for e in errors:
-            print(f"{name}:{e}", file=sys.stderr)
-        return 1 if errors else 0
+    text = open(files[0], encoding="utf-8").read() if files else sys.stdin.read()
 
     result = parse(text)
     for e in result.errors:

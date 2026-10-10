@@ -1,6 +1,9 @@
+Грамматика Funny (LL(1), рекурсивный спуск)
+
+Обозначения: [ x ] - необязательно, { x } - повторение, | - выбор, "x" - токен.
+
 module      = item { item }
 item        = IDENT params ( "=>" predicate [ ";" ] | funcRest )
-
 params      = "(" [ varDef { "," varDef } ] ")"
 funcRest    = [ "requires" predicate ]
               "returns" varDef { "," varDef }
@@ -12,14 +15,13 @@ varDef      = IDENT ":" type
 localDef    = IDENT [ ":" type ]
 type        = "int" [ "[" "]" ]
 
-statement   = assignment | ifStmt | whileStmt | block | assertStmt | assumeStmt
+statement   = block | ifStmt | whileStmt | assertStmt | assumeStmt | assignment
 block       = "{" { statement } "}"
-ifStmt      = "if" "(" condition ")" block [ "else" block ]
-whileStmt   = "while" "(" condition ")" [ "invariant" predicate ] block
+ifStmt      = "if" "(" condition ")" statement [ "else" statement ]
+whileStmt   = "while" "(" condition ")" [ "invariant" predicate ] statement
 assertStmt  = "assert" predicate ";"
 assumeStmt  = "assume" predicate ";"
-assignment  = IDENT "=" expr ";"
-            | IDENT "[" expr "]" "=" expr ";"
+assignment  = IDENT [ "[" expr "]" ] "=" expr ";"
             | IDENT "," IDENT { "," IDENT } "=" call ";"
 
 condition   = orC [ "->" condition ]
@@ -35,15 +37,23 @@ notP        = "not" notP | predAtom
 predAtom    = quantifier | formulaRef | "true" | "false" | comparison | "(" predicate ")"
 quantifier  = ( "forall" | "exists" ) "(" varDef "|" predicate ")"
 formulaRef  = IDENT "(" [ expr { "," expr } ] ")"
+
 comparison  = expr relop expr
 relop       = "==" | "!=" | "<" | "<=" | ">" | ">="
 
 expr        = term { ( "+" | "-" ) term }
 term        = unary { ( "*" | "/" ) unary }
 unary       = "-" unary | primary
-primary     = INT
-            | call
-            | IDENT "[" expr "]"
-            | IDENT
-            | "(" expr ")"
+primary     = INT | call | IDENT "[" expr "]" | IDENT | "(" expr ")"
 call        = ( IDENT | "length" ) "(" [ expr { "," expr } ] ")"
+
+Приоритеты и ассоциативность (от низшего к высшему)
+
+  ->                правая
+  or                левая
+  and               левая
+  not               префиксный
+  == != < <= > >=   неассоциативные
+  + -               левая
+  * /               левая
+  унарный -         префиксный
